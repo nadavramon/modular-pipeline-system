@@ -1,0 +1,7 @@
+output/
+*.o
+*.so
+*.a
+*.out
+*.log
+.DS_Store
