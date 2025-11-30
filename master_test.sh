@@ -116,7 +116,7 @@ count_test() {
 }
 
 run_with_timeout() {
-    perl -e 'alarm shift; exec @ARGV' "$TIMEOUT_DURATION" "$@" 2>&1
+    timeout "$TIMEOUT_DURATION" "$@" 2>&1
 }
 
 run_analyzer() {
@@ -509,7 +509,7 @@ test_memory_management() {
     
     local valgrind_output
     valgrind_output=$(echo -e "test\n<END>" | \
-        perl -e 'alarm shift; exec @ARGV' "$VALGRIND_TIMEOUT" valgrind --leak-check=full --show-leak-kinds=all \
+        timeout "$VALGRIND_TIMEOUT" valgrind --leak-check=full --show-leak-kinds=all \
         --track-origins=yes "$ANALYZER" 10 logger 2>&1 || true)
     
     if [[ "$valgrind_output" == *"All heap blocks were freed -- no leaks are possible"* ]] || \
@@ -525,7 +525,7 @@ test_memory_management() {
     count_test
     
     valgrind_output=$(echo -e "complex test\nmore data\n<END>" | \
-        perl -e 'alarm shift; exec @ARGV' "$VALGRIND_TIMEOUT" valgrind --leak-check=full \
+        timeout "$VALGRIND_TIMEOUT" valgrind --leak-check=full \
         "$ANALYZER" 15 uppercaser rotator flipper expander logger 2>&1 || true)
     
     if [[ "$valgrind_output" == *"All heap blocks were freed -- no leaks are possible"* ]] || \

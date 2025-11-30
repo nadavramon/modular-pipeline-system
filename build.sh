@@ -1,82 +1,67 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-#Toolchain and flags
-CC=gcc-13
-WARN="-Wall -Wextra -Wpedantic -Werror -Wconversion -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wundef -Wpointer-arith -Wcast-align"
-CFLAGS="-std=gnu11 -g -O0 -pthread -fno-common -D_GNU_SOURCE $WARN"
-LDFLAGS="-ldl -pthread"
-SHARED_FLAGS="-fPIC -shared"
-
-#Colors
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m'
+NC='\033[0m' # No Color
 
-print_status() { 
-  echo -e "${GREEN}[BUILD]${NC} $1"; 
+# Function to print colored output
+print_status()
+{
+echo -e "${GREEN}[BUILD]${NC} $1"
 }
-print_warning() { 
-  echo -e "${YELLOW}[WARN]${NC} $1";
+print_warning()
+{
+echo -e "${YELLOW}[WARNING]${NC} $1"
 }
-print_error() {
-  echo -e "${RED}[ERROR]${NC} $1"; 
-}
-
-usage() {
-  cat <<'EOF'
-Usage:
-  ./build.sh #build
-  ./build.sh clean #remove build artifacts
-  ./build.sh rebuild #clean and build
-EOF
+print_error()
+{
+echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Clean function
 clean_artifacts() {
-  printf "${YELLOW}[CLEAN]${NC} removing build artifacts...\n"
+  echo -e "${YELLOW}[CLEAN]${NC} removing build artifacts..."
   rm -f output/analyzer output/*.so
-  printf "${GREEN}[OK]${NC} cleanup complete\n"
+  echo -e "${GREEN}[OK]${NC} cleanup complete"
 }
 
-#Handling arguments
+# Handle commands
 case "${1:-}" in
-  "") : ;;
-  clean) clean_artifacts; exit 0 ;;
-  rebuild) clean_artifacts; printf "${YELLOW}[INFO]${NC} rebuilding project...\n" ;;
-  -h|--help) usage; exit 0 ;;
-  *) usage; exit 2 ;;
+  clean)
+    clean_artifacts
+    exit 0
+    ;;
+  rebuild)
+    clean_artifacts
+    echo -e "${YELLOW}[INFO]${NC} rebuilding project..."
+    ;;
 esac
 
-#Environment probe
+# Create output directory
 mkdir -p output
-print_status "toolchain: $($CC --version | head -n 1)"
 
-#Analyzer
-print_status "analyzer"
-if ! $CC $CFLAGS -o output/analyzer main.c $LDFLAGS; then
-  print_error "failed to build analyzer"
-  exit 1
-fi
+# Build main application
+print_status "Building analyzer"
+gcc -o output/analyzer main.c -ldl -lpthread || { 
+    print_error "Failed to build analyzer"; 
+    exit 1; 
+}
 
-#Plugins
-build_plugin() {
-  local name="$1"
-  print_status "${name}.so"
-  if ! $CC $CFLAGS $SHARED_FLAGS \
-        -o "output/${name}.so" \
-        "plugins/${name}.c" \
+# Build plugins exactly as specified in the assignment
+for plugin_name in logger uppercaser rotator flipper expander typewriter; do
+    print_status "Building plugin: $plugin_name"
+    gcc -fPIC -shared -o output/${plugin_name}.so \
+        plugins/${plugin_name}.c \
         plugins/plugin_common.c \
         plugins/sync/monitor.c \
         plugins/sync/consumer_producer.c \
-        $LDFLAGS; then
-    print_error "failed to build ${name}"
-    exit 1
-  fi
-}
-
-for plugin in logger uppercaser flipper rotator expander typewriter; do
-  build_plugin "$plugin"
+        -ldl -lpthread || {
+        print_error "Failed to build $plugin_name"
+        exit 1
+    }
 done
 
-print_status "[OK] build complete"
+print_status "Build complete"

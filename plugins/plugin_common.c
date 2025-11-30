@@ -47,16 +47,7 @@ void* plugin_consumer_thread(void* arg) {
         if (g_ctx.next_place_work) {
             g_ctx.next_place_work(saw_end ? END_TOKEN : out);
         }
-        else {
-            if (!saw_end) {
-                if (out != in) {
-                    free((void*)out);
-                }
-                else {
-                    free(in);
-                }
-            }
-        }
+        free((void*)out);
         if (saw_end) {
             break;
         }
